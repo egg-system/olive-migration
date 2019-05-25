@@ -107,6 +107,7 @@ for columnName, item in csvData.iteritems():
         # あとで連結ようで使う
         output['building'] = item
     elif columnName == '個性心理学':
+        # TODO:idにする？
         output['zoomancy_id'] = item
     elif columnName == '固定電話':
         output['fixed_line_tel'] = item
@@ -144,6 +145,7 @@ for columnName, item in csvData.iteritems():
     elif columnName == '住所（番地）':
         output['address'] = item
     elif columnName == '来店経緯':
+        # TODO:idにする？
         output['visit_reason_id'] = item
 
 #     print(type(columnName))
