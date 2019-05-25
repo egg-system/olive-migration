@@ -1,0 +1,37 @@
+version: '3'
+services:
+  script:
+    restart: always
+    build: .
+    container_name: 'olive-script'
+    ports:
+      - "5000:5000"
+    working_dir: '/root/'
+    volumes:
+      - ./src:/root/src/
+      - ~/.zshrc:/root/.zshrc
+      - bundle-data:/root/src/
+    tty: true
+    depends_on:
+      - mysql
+    stdin_open: true
+
+  mysql:
+    # image: mysql:5.7
+    image: mysql
+    container_name: "olive-data"
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'db_olive'
+      MYSQL_USER: 'root'
+      MYSQL_ROOT_PASSWORD: 'mysql'
+      TZ: "Asia/Tokyo"
+    ports:
+      - 4306:3306
+    volumes:
+      - olive-data:/var/lib/mysql
+      - ./initdb.d:/docker-entrypoint-initdb.d
+
+volumes:
+  bundle-data:
+  olive-data:
