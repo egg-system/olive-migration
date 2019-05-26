@@ -27,3 +27,9 @@ $ mysql -u root -p
 (例)
 $ sudo docker cp c1d6285eb718:/root/customers.csv .
 ```
+
+### トラブルシューティング
+```
+$ sudo docker volume rm $(sudo docker volume ls -qf dangling=true)
+```
+https://github.com/laradock/laradock/issues/1173

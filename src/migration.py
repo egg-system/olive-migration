@@ -4,6 +4,8 @@ import pandas as pd
 import MySQLdb
 import mojimoji
 import jaconv
+import datetime
+import numpy
 from phpserialize import loads
 
 # DataFrame型で取得
@@ -63,6 +65,49 @@ print(csvData.shape[0])
     # output[index] =
 
 
+# 接続する
+con = MySQLdb.connect(user='root', passwd='mysql', host='mysql', db='db_olive', charset='utf8')
+# カーソルを取得する
+cur= con.cursor()
+
+# クエリを実行する
+sql_baby_ages = "select id, name from baby_ages"
+cur.execute(sql_baby_ages)
+# 実行結果をすべて取得する
+result_baby_ages = cur.fetchall()
+print(result_baby_ages)
+print(type(result_baby_ages)) # <class 'tuple'>
+print(result_baby_ages[1][0]) # id
+print(result_baby_ages[1][1]) # name
+print(type(result_baby_ages[1][0])) # <class 'int'>
+print(type(result_baby_ages[1][1])) # <class 'str'>
+
+dict_baby_ages = {}
+# ループ
+for id, name in result_baby_ages:
+    # print(id, name)
+    # 名前をキーにしてidを代入する
+    dict_baby_ages[name] = id
+
+# print(dict)
+# print(dict['6ヶ月'])
+# print(type(dict['6ヶ月'])) # <class 'int'>
+
+# 生後をidに変換
+def convert_baby_ages(age):
+    key = ''
+    if str(age).find('歳') != -1:
+        # 最初の2文字を切り取る
+        key = str(age)[:2]
+    elif str(age).find('ヶ月') != -1:
+        # 歳が入ってない場合はそのまま使う
+        key = str(age)
+
+    if key != '':
+        return dict_baby_ages[key]
+    else:
+        return ''
+
 
 # 列でデータを扱う
 output = pd.DataFrame()
@@ -74,9 +119,9 @@ for columnName, item in csvData.iteritems():
     #     output['can_receive_mail'] = list(map(lambda x: True if x == '希望' else False, item))
     elif columnName == 'PCメール':
         output['pc_mail'] = item
-    # elif columnName == 'P顧客ID':
-        # TODO:どうするか？やるならKを除外して残りをIDとして入れる？
-        # output[''] = item
+    elif columnName == 'P顧客ID':
+        # Kを消した数値をIDにする
+        output['id'] = list(map(lambda x: str(x).strip("K"), item))
     elif columnName == 'Web検索':
         output['searchd_by'] = item
     elif columnName == 'お子様':
@@ -87,8 +132,8 @@ for columnName, item in csvData.iteritems():
     elif columnName == 'サイズ':
         # TODO:IDに変換する必要あり？
         output['size_id'] = item
-    # elif columnName == 'サンキューレター':
-        # output['size_id'] = item
+    elif columnName == 'サンキューレター':
+        output['is_receive_thank_you_letter'] = list(map(lambda x: False if x == '未送付' else True, item))
     elif columnName == 'ふりがな姓':
         # カタカナへ変換
         output['first_kana'] = list(map(lambda x: jaconv.hira2kata(str(x)), item))
@@ -129,19 +174,19 @@ for columnName, item in csvData.iteritems():
         output['first_name'] = item
     elif columnName == '名':
         output['last_name'] = item
-    # elif columnName == '性別':
-        # output[''] = item
+    elif columnName == '性別':
+        output['gender'] = item
     elif columnName == '生後':
         # TODO:idにする？
-        output['baby_age_id'] = item
+        output['baby_age_id'] = list(map(convert_baby_ages, item))
     elif columnName == '生年月日':
         output['birthday'] = item
     elif columnName == '知人の紹介':
         output['introducer'] = item
     elif columnName == '都道府県':
         output['prefecture'] = item
-    # elif columnName == '年齢':
-        # output[''] = item
+    elif columnName == '年齢':
+        output['age'] = item
     elif columnName == '住所（番地）':
         output['address'] = item
     elif columnName == '来店経緯':
@@ -181,7 +226,9 @@ output['allow_password_change'] = ''
 
 # customersテーブル順に並べ替え
 # output.loc[:,['first_name',
-output = output[['first_name',
+output = output[[
+              'id',
+              'first_name',
               'last_name',
               'first_kana',
               'last_kana',
@@ -221,23 +268,31 @@ output = output[['first_name',
               'provider',
               'uid',
               'tokens',
-              'allow_password_change'
+              'allow_password_change',
+              'is_receive_thank_you_letter',
+              'gender',
+              'age',
               ]]
 
+# indexをidにする
+output = output.set_index('id')
+
+# DataFrameのループ　全行データ取得
+for index, row in output.iterrows():
+    # uidに代入
+    uid = ''
+    # pc_mailがあればセット
+    if type(row['pc_mail']) is str:
+        uid = row['pc_mail']
+    # phone_mailを優先して上書き
+    if type(row['phone_mail']) is str:
+        uid = row['phone_mail']
+
+    # uidを上書きする
+    output.at[index, 'uid'] = uid
+
 # csvに出力
-output.to_csv('customers.csv')
-print(output)
+# output.to_csv('customers.csv')
+print(output['baby_age_id'])
+# print(output.iloc[1][2])
 
-
-
-
-# # 接続する
-# con = MySQLdb.connect(user='root', passwd='mysql', host='mysql', db='db_olive')
-# # カーソルを取得する
-# cur= con.cursor()
-# # クエリを実行する
-# sql = "select * from users"
-# cur.execute(sql)
-# # 実行結果をすべて取得する
-# rows = cur.fetchall()
-# print(rows)

@@ -11,6 +11,7 @@ RUN pip install pandas
 RUN pip install phpserialize
 RUN pip install mojimoji
 RUN pip install jaconv
+RUN pip install numpy
 
 ENV LANG ja_JP.UTF-8
 ENV LANGUAGE ja_JP:ja
