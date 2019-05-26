@@ -8,23 +8,20 @@ import datetime
 import numpy
 from phpserialize import loads
 
-# DataFrame型で取得
-csvData = pd.read_csv('./src/file/fm_sample.csv')
-
 # 全件表示
 # print(csvData)
 
 # カラム名表示
-print(csvData.columns.values)
+# print(csvData.columns.values)
 
 # キー名表示
-print(csvData.index.values)
+# print(csvData.index.values)
 
 # 範囲指定して表示
 # print(csvData[0:3])
 
 # 行数取得
-print(csvData.shape[0])
+# print(csvData.shape[0])
 
 # DataFrameのループ
 # for columnName in csvData:
@@ -63,6 +60,16 @@ print(csvData.shape[0])
     # print(row['PCメール'])
     # print(row[2]) # PCメール
     # output[index] =
+
+# 名前とメールの一覧をwordpressのデータから取得
+dict_mail = {}
+csvData = pd.read_csv('./src/file/wordpress.csv')
+for index, row in csvData.iterrows():
+    # print(row['First Name'])
+    # print(row['Last Name'])
+    # print(row['Email'])
+    name = row['Last Name'] + row['First Name']
+    dict_mail[name] = row['Email']
 
 
 # 接続する
@@ -109,6 +116,8 @@ def convert_baby_ages(age):
         return ''
 
 
+# DataFrame型で取得
+csvData = pd.read_csv('./src/file/fm_sample.csv')
 # 列でデータを扱う
 output = pd.DataFrame()
 # DataFrameのループ　全列データ取得
@@ -288,11 +297,17 @@ for index, row in output.iterrows():
     if type(row['phone_mail']) is str:
         uid = row['phone_mail']
 
+    name = row['first_name'] + row['last_name']
+    # print(name)
+    if uid == '' and name in dict_mail:
+        print(dict_mail[name])
+        uid = dict_mail[name]
+
     # uidを上書きする
     output.at[index, 'uid'] = uid
 
 # csvに出力
-# output.to_csv('customers.csv')
-print(output['baby_age_id'])
+output.to_csv('customers.csv')
+# print(output['baby_age_id'])
 # print(output.iloc[1][2])
 
