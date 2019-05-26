@@ -61,44 +61,41 @@ from phpserialize import loads
     # print(row[2]) # PCメール
     # output[index] =
 
-# 名前とメールの一覧をwordpressのデータから取得
+# ワードプレスから名前とメールの一覧データから取得
 dict_mail = {}
 csvData = pd.read_csv('./src/file/wordpress.csv')
 for index, row in csvData.iterrows():
-    # print(row['First Name'])
-    # print(row['Last Name'])
-    # print(row['Email'])
     name = row['Last Name'] + row['First Name']
     dict_mail[name] = row['Email']
 
+# 子供を数字に変換
+def convert_children_count(children_str):
+    # print(type(children_str))
+    # print(children_str)
+    # print('-------')
+    # 文字列が入っている場合は変換
+    if type(children_str) is str:
+        return mojimoji.zen_to_han(str(children_str).strip("人"))
+    else:
+        # 文字列が入ってない場合は空文字に変換
+        return ''
 
-# 接続する
+# DB接続
 con = MySQLdb.connect(user='root', passwd='mysql', host='mysql', db='db_olive', charset='utf8')
 # カーソルを取得する
 cur= con.cursor()
 
-# クエリを実行する
+
+# 生後の情報をDBから取得
 sql_baby_ages = "select id, name from baby_ages"
 cur.execute(sql_baby_ages)
 # 実行結果をすべて取得する
 result_baby_ages = cur.fetchall()
-print(result_baby_ages)
-print(type(result_baby_ages)) # <class 'tuple'>
-print(result_baby_ages[1][0]) # id
-print(result_baby_ages[1][1]) # name
-print(type(result_baby_ages[1][0])) # <class 'int'>
-print(type(result_baby_ages[1][1])) # <class 'str'>
-
+# 生後の情報を配列にまとめる
 dict_baby_ages = {}
-# ループ
 for id, name in result_baby_ages:
-    # print(id, name)
     # 名前をキーにしてidを代入する
     dict_baby_ages[name] = id
-
-# print(dict)
-# print(dict['6ヶ月'])
-# print(type(dict['6ヶ月'])) # <class 'int'>
 
 # 生後をidに変換
 def convert_baby_ages(age):
@@ -115,6 +112,44 @@ def convert_baby_ages(age):
     else:
         return ''
 
+# サイズ情報をDBから取得する
+sql_sizes = "select id, name from sizes"
+cur.execute(sql_sizes)
+# 実行結果をすべて取得する
+result_sizes = cur.fetchall()
+# サイズの情報を配列にまとめる
+dict_sizes = {}
+for id, name in result_sizes:
+    # 名前csvファイルに合わせて微調整
+    if name == 'S〜M':
+        re_name = 'S-M'
+    elif name == 'M〜L':
+        re_name = 'M-L'
+    else:
+        re_name = name
+
+    dict_sizes[re_name] = id
+
+# 動物占い情報をDBから取得する
+sql_zoomancies = "select id, name from zoomancies"
+cur.execute(sql_zoomancies)
+# 実行結果をすべて取得する
+result_zoomancies = cur.fetchall()
+# サイズの情報を配列にまとめる
+dict_zoomancies = {}
+for id, name in result_zoomancies:
+    # 全角スペースを半角スペースに変換(csvが半角スペースになっているので)
+    re_name = name.replace("　", " ")
+    dict_zoomancies[re_name] = id
+
+# 動物占いをIDに変換
+def convert_zoomancies(zoomancies):
+    if zoomancies in dict_zoomancies:
+        return dict_zoomancies[zoomancies]
+    else:
+        # DBに入ってないものを出力
+        if type(zoomancies) is str:
+            print(zoomancies)
 
 # DataFrame型で取得
 csvData = pd.read_csv('./src/file/fm_sample.csv')
@@ -134,13 +169,11 @@ for columnName, item in csvData.iteritems():
     elif columnName == 'Web検索':
         output['searchd_by'] = item
     elif columnName == 'お子様':
-        # 「人」を除外して半角数字にする
-        output['children_count'] = list(map(lambda x: mojimoji.zen_to_han(str(x).strip("人")), item))
+        output['children_count'] = list(map(convert_children_count, item))
     elif columnName == 'カルテNo':
         output['card_number'] = item
     elif columnName == 'サイズ':
-        # TODO:IDに変換する必要あり？
-        output['size_id'] = item
+        output['size_id'] = list(map(lambda x: dict_sizes[x] if x in dict_sizes else '', item))
     elif columnName == 'サンキューレター':
         output['is_receive_thank_you_letter'] = list(map(lambda x: False if x == '未送付' else True, item))
     elif columnName == 'ふりがな姓':
@@ -161,8 +194,7 @@ for columnName, item in csvData.iteritems():
         # あとで連結ようで使う
         output['building'] = item
     elif columnName == '個性心理学':
-        # TODO:idにする？
-        output['zoomancy_id'] = item
+        output['zoomancy_id'] = list(map(convert_zoomancies, item))
     elif columnName == '固定電話':
         output['fixed_line_tel'] = item
     elif columnName == '最寄駅':
@@ -186,7 +218,6 @@ for columnName, item in csvData.iteritems():
     elif columnName == '性別':
         output['gender'] = item
     elif columnName == '生後':
-        # TODO:idにする？
         output['baby_age_id'] = list(map(convert_baby_ages, item))
     elif columnName == '生年月日':
         output['birthday'] = item
@@ -215,6 +246,7 @@ for columnName, item in csvData.iteritems():
 
 # 住所を整形してセットする
 output['address'] = output['address'].str.cat(output['building'], sep=' ')
+# 不要な一時カラムは削除する
 output = output.drop(columns='building')
 
 # 共通の値をセット
@@ -297,10 +329,9 @@ for index, row in output.iterrows():
     if type(row['phone_mail']) is str:
         uid = row['phone_mail']
 
+    # PCメール、携帯メールがなくてワードプレスのメールアドレスがある場合はそれを使う
     name = row['first_name'] + row['last_name']
-    # print(name)
     if uid == '' and name in dict_mail:
-        print(dict_mail[name])
         uid = dict_mail[name]
 
     # uidを上書きする
@@ -308,6 +339,6 @@ for index, row in output.iterrows():
 
 # csvに出力
 output.to_csv('customers.csv')
-# print(output['baby_age_id'])
+# print(output['children_count'])
 # print(output.iloc[1][2])
 
