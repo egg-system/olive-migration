@@ -7,6 +7,7 @@ import jaconv
 import datetime
 import numpy
 from phpserialize import loads
+from functools import partial
 
 # 全件表示
 # print(csvData)
@@ -151,6 +152,76 @@ def convert_zoomancies(zoomancies):
         if type(zoomancies) is str:
             print(zoomancies)
 
+# 職業情報をDBから取得する
+sql_occupations = "select id, name from occupations"
+cur.execute(sql_occupations)
+# 実行結果をすべて取得する
+result_occupations = cur.fetchall()
+# サイズの情報を配列にまとめる
+dict_occupations = {}
+for id, name in result_occupations:
+    dict_occupations[name] = id
+
+# 職業情報をIDに変換
+def convert_occupations(occupations):
+    if occupations in dict_occupations:
+        return dict_occupations[occupations]
+    else:
+        # DBに入ってないものを出力
+        if type(occupations) is str:
+            print(occupations)
+
+# 最寄駅をDBから取得する
+sql_nearest_stations = "select id, name from nearest_stations"
+cur.execute(sql_nearest_stations)
+# 実行結果をすべて取得する
+result_nearest_stations = cur.fetchall()
+# サイズの情報を配列にまとめる
+dict_nearest_stations = {}
+for id, name in result_nearest_stations:
+    dict_nearest_stations[name] = id
+
+# 最寄駅をIDに変換
+def convert_nearest_stations(nearest_stations):
+    if nearest_stations in dict_nearest_stations:
+        return dict_nearest_stations[nearest_stations]
+    else:
+        # DBに入ってないものを出力
+        if type(nearest_stations) is str:
+            print(nearest_stations)
+
+# 来店経緯をDBから取得する
+sql_visit_reasons = "select id, name from visit_reasons"
+cur.execute(sql_visit_reasons)
+# 実行結果をすべて取得する
+result_visit_reasons = cur.fetchall()
+# サイズの情報を配列にまとめる
+dict_visit_reasons = {}
+for id, name in result_visit_reasons:
+    dict_visit_reasons[name] = id
+
+# 来店経緯をIDに変換
+def convert_visit_reasons(visit_reasons):
+    if visit_reasons in dict_visit_reasons:
+        return dict_visit_reasons[visit_reasons]
+    else:
+        # DBに入ってないものを出力
+        if type(visit_reasons) is str:
+            print(visit_reasons)
+
+# csvに入っている日付からDBに入れる用の日付に変換する
+def convert_date(date, prefix):
+    if type(date) is str:
+        # "/"で分割する
+        date_list = str(date).split('/')
+        year = prefix + date_list[2]
+        month = date_list[0]
+        day = date_list[1]
+        # return 'aa'
+        return datetime.date(int(year), int(month), int(day))
+    else:
+        return ''
+
 # DataFrame型で取得
 csvData = pd.read_csv('./src/file/fm_sample.csv')
 # 列でデータを扱う
@@ -159,8 +230,10 @@ output = pd.DataFrame()
 for columnName, item in csvData.iteritems():
     if columnName == '〒':
         output['zip_code'] = item
-    # elif columnName == 'DM配信':
-    #     output['can_receive_mail'] = list(map(lambda x: True if x == '希望' else False, item))
+    elif columnName == 'DM配信':
+        # output['can_receive_dm_mail'] = list(map(lambda x: True if x == '希望' else False, item))
+        # インポート用に1,0にする
+        output['can_receive_dm_mail'] = list(map(lambda x: 1 if x == '希望' else 0, item))
     elif columnName == 'PCメール':
         output['pc_mail'] = item
     elif columnName == 'P顧客ID':
@@ -175,7 +248,9 @@ for columnName, item in csvData.iteritems():
     elif columnName == 'サイズ':
         output['size_id'] = list(map(lambda x: dict_sizes[x] if x in dict_sizes else '', item))
     elif columnName == 'サンキューレター':
-        output['is_receive_thank_you_letter'] = list(map(lambda x: False if x == '未送付' else True, item))
+        # output['is_receive_thank_you_letter'] = list(map(lambda x: False if x == '未送付' else True, item))
+        # インポート用に1,0にする
+        output['is_receive_thank_you_letter'] = list(map(lambda x: 0 if x == '未送付' else 1, item))
     elif columnName == 'ふりがな姓':
         # カタカナへ変換
         output['first_kana'] = list(map(lambda x: jaconv.hira2kata(str(x)), item))
@@ -183,7 +258,9 @@ for columnName, item in csvData.iteritems():
         # カタカナへ変換
         output['last_kana'] = list(map(lambda x: jaconv.hira2kata(str(x)), item))
     elif columnName == 'メール配信':
-        output['can_receive_mail'] = list(map(lambda x: True if x == '希望' else False, item))
+        # output['can_receive_mail'] = list(map(lambda x: True if x == '希望' else False, item))
+        # インポート用に1,0にする
+        output['can_receive_mail'] = list(map(lambda x: 1 if x == '希望' else 0, item))
     elif columnName == 'メモ':
         output['comment'] = item
     elif columnName == '携帯メール':
@@ -198,8 +275,7 @@ for columnName, item in csvData.iteritems():
     elif columnName == '固定電話':
         output['fixed_line_tel'] = item
     elif columnName == '最寄駅':
-        # TODO:IDに変換する必要あり
-        output['nearest_station_id'] = item
+        output['nearest_station_id'] = list(map(convert_nearest_stations, item))
     elif columnName == '住所（市区町村）':
         output['city'] = item
     # elif columnName == '氏名':
@@ -207,10 +283,11 @@ for columnName, item in csvData.iteritems():
     elif columnName == '初来院日':
         output['first_visited_at'] = item
     elif columnName == '職業':
-        # TODO:IDに変換する必要あり？
-        output['occupation_id'] = item
+        output['occupation_id'] = list(map(convert_occupations, item))
     elif columnName == '診察券受渡':
-        output['has_registration_card'] = list(map(lambda x: True if x == '済' else False, item))
+        # output['has_registration_card'] = list(map(lambda x: True if x == '済' else False, item))
+        # インポート用に1,0にする
+        output['has_registration_card'] = list(map(lambda x: 1 if x == '済' else 0, item))
     elif columnName == '姓':
         output['first_name'] = item
     elif columnName == '名':
@@ -220,7 +297,9 @@ for columnName, item in csvData.iteritems():
     elif columnName == '生後':
         output['baby_age_id'] = list(map(convert_baby_ages, item))
     elif columnName == '生年月日':
-        output['birthday'] = item
+        # output['birthday'] = item
+        # output['birthday'] = list(map(convert_date, item))
+        output['birthday'] = list(map(partial(convert_date, prefix='19'), item))
     elif columnName == '知人の紹介':
         output['introducer'] = item
     elif columnName == '都道府県':
@@ -230,8 +309,7 @@ for columnName, item in csvData.iteritems():
     elif columnName == '住所（番地）':
         output['address'] = item
     elif columnName == '来店経緯':
-        # TODO:idにする？
-        output['visit_reason_id'] = item
+        output['visit_reason_id'] = list(map(convert_visit_reasons, item))
 
 #     print(type(columnName))
     # print(columnName)
@@ -278,6 +356,7 @@ output = output[[
               'pc_mail',
               'phone_mail',
               'can_receive_mail',
+              'can_receive_dm_mail',
               'birthday',
               'zip_code',
               'prefecture',
@@ -329,9 +408,11 @@ for index, row in output.iterrows():
     if type(row['phone_mail']) is str:
         uid = row['phone_mail']
 
-    # PCメール、携帯メールがなくてワードプレスのメールアドレスがある場合はそれを使う
     name = row['first_name'] + row['last_name']
-    if uid == '' and name in dict_mail:
+    # PCメール、携帯メールがなくてワードプレスのメールアドレスがある場合はそれを使う
+    # if uid == '' and name in dict_mail:
+    # →ワードプレスのメールを優先する
+    if name in dict_mail:
         uid = dict_mail[name]
 
     # uidを上書きする
