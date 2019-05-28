@@ -9,59 +9,6 @@ import numpy
 from phpserialize import loads
 from functools import partial
 
-# 全件表示
-# print(csvData)
-
-# カラム名表示
-# print(csvData.columns.values)
-
-# キー名表示
-# print(csvData.index.values)
-
-# 範囲指定して表示
-# print(csvData[0:3])
-
-# 行数取得
-# print(csvData.shape[0])
-
-# DataFrameのループ
-# for columnName in csvData:
-#     print(type(columnName))
-#     print(columnName)
-#     print('======\n')
-
-# DataFrameのループ　全列データ取得
-# for columnName, item in csvData.iteritems():
-#     print(type(columnName))
-#     print(columnName)
-#     print('~~~~~~')
-#
-#     print(type(item))
-#     print(item)
-#     print('------')
-#
-#     print('======\n')
-
-# print('---')
-# output = pd.DataFrame({'aa': [], 'bb': []})
-# output.loc[1] = ['aa1', 'bb1']
-# print(output)
-# print('---')
-
-
-# DataFrameのループ　全行データ取得
-# for index, row in csvData.iterrows():
-    # print(type(index))
-    # print(index)
-    # print('-----')
-    #
-    # print(type(row))
-    # print(row)
-    # print('------')
-    # print(row['PCメール'])
-    # print(row[2]) # PCメール
-    # output[index] =
-
 # ワードプレスから名前とメールの一覧データから取得
 dict_mail = {}
 csvData = pd.read_csv('./src/file/wordpress.csv')
@@ -71,9 +18,6 @@ for index, row in csvData.iterrows():
 
 # 子供を数字に変換
 def convert_children_count(children_str):
-    # print(type(children_str))
-    # print(children_str)
-    # print('-------')
     # 文字列が入っている場合は変換
     if type(children_str) is str:
         return mojimoji.zen_to_han(str(children_str).strip("人"))
@@ -85,7 +29,6 @@ def convert_children_count(children_str):
 con = MySQLdb.connect(user='root', passwd='mysql', host='mysql', db='db_olive', charset='utf8')
 # カーソルを取得する
 cur= con.cursor()
-
 
 # 生後の情報をDBから取得
 sql_baby_ages = "select id, name from baby_ages"
@@ -217,10 +160,10 @@ def convert_date(date, prefix):
         year = prefix + date_list[2]
         month = date_list[0]
         day = date_list[1]
-        # return 'aa'
         return datetime.date(int(year), int(month), int(day))
     else:
-        return ''
+        # 日付が入ってない場合はデフォルト値をセットする(後からDBをNULLに修正する)
+        return '9999-12-31'
 
 # DataFrame型で取得
 csvData = pd.read_csv('./src/file/fm_sample.csv')
@@ -231,7 +174,6 @@ for columnName, item in csvData.iteritems():
     if columnName == '〒':
         output['zip_code'] = item
     elif columnName == 'DM配信':
-        # output['can_receive_dm_mail'] = list(map(lambda x: True if x == '希望' else False, item))
         # インポート用に1,0にする
         output['can_receive_dm_mail'] = list(map(lambda x: 1 if x == '希望' else 0, item))
     elif columnName == 'PCメール':
@@ -248,7 +190,6 @@ for columnName, item in csvData.iteritems():
     elif columnName == 'サイズ':
         output['size_id'] = list(map(lambda x: dict_sizes[x] if x in dict_sizes else '', item))
     elif columnName == 'サンキューレター':
-        # output['is_receive_thank_you_letter'] = list(map(lambda x: False if x == '未送付' else True, item))
         # インポート用に1,0にする
         output['is_receive_thank_you_letter'] = list(map(lambda x: 0 if x == '未送付' else 1, item))
     elif columnName == 'ふりがな姓':
@@ -258,7 +199,6 @@ for columnName, item in csvData.iteritems():
         # カタカナへ変換
         output['last_kana'] = list(map(lambda x: jaconv.hira2kata(str(x)), item))
     elif columnName == 'メール配信':
-        # output['can_receive_mail'] = list(map(lambda x: True if x == '希望' else False, item))
         # インポート用に1,0にする
         output['can_receive_mail'] = list(map(lambda x: 1 if x == '希望' else 0, item))
     elif columnName == 'メモ':
@@ -279,13 +219,13 @@ for columnName, item in csvData.iteritems():
     elif columnName == '住所（市区町村）':
         output['city'] = item
     # elif columnName == '氏名':
+        # この項目はすでに他であるので使わない
         # output['first_name'] = item
     elif columnName == '初来院日':
-        output['first_visited_at'] = item
+        output['first_visited_at'] = list(map(partial(convert_date, prefix='20'), item))
     elif columnName == '職業':
         output['occupation_id'] = list(map(convert_occupations, item))
     elif columnName == '診察券受渡':
-        # output['has_registration_card'] = list(map(lambda x: True if x == '済' else False, item))
         # インポート用に1,0にする
         output['has_registration_card'] = list(map(lambda x: 1 if x == '済' else 0, item))
     elif columnName == '姓':
@@ -297,8 +237,6 @@ for columnName, item in csvData.iteritems():
     elif columnName == '生後':
         output['baby_age_id'] = list(map(convert_baby_ages, item))
     elif columnName == '生年月日':
-        # output['birthday'] = item
-        # output['birthday'] = list(map(convert_date, item))
         output['birthday'] = list(map(partial(convert_date, prefix='19'), item))
     elif columnName == '知人の紹介':
         output['introducer'] = item
@@ -307,41 +245,33 @@ for columnName, item in csvData.iteritems():
     elif columnName == '年齢':
         output['age'] = item
     elif columnName == '住所（番地）':
-        output['address'] = item
+        # あとで連結ようで使う
+        output['banchi'] = item
     elif columnName == '来店経緯':
         output['visit_reason_id'] = list(map(convert_visit_reasons, item))
 
-#     print(type(columnName))
-    # print(columnName)
-    # print(item)
-#     print('~~~~~~')
-#
-#     print(type(item))
-#     print(item)
-#     print('------')
-#
-#     print('======\n')
 
 # 住所を整形してセットする
-output['address'] = output['address'].str.cat(output['building'], sep=' ')
+output['address'] = output['prefecture'].str.cat(output['city'], sep=' ').str.cat(output['banchi'], sep=' ').str.cat(output['building'], sep=' ')
 # 不要な一時カラムは削除する
 output = output.drop(columns='building')
+output = output.drop(columns='banchi')
 
-# 共通の値をセット
-output['first_visit_store_id'] = ''
-output['last_visit_store_id'] = ''
-output['last_visited_at'] = ''
-output['created_at'] = ''
-output['updated_at'] = ''
+# 必要なものだけ共通の値をセット
+# output['first_visit_store_id'] = ''
+# output['last_visit_store_id'] = ''
+# output['last_visited_at'] = datetime.date.today()
+output['created_at'] = datetime.datetime.today()
+output['updated_at'] = datetime.datetime.today()
 output['email'] = ''
 output['encrypted_password'] = ''
-output['reset_password_token'] = ''
-output['reset_password_sent_at'] = ''
-output['remember_created_at'] = ''
+# output['reset_password_token'] = ''
+# output['reset_password_sent_at'] = datetime.datetime.today()
+# output['remember_created_at'] = datetime.datetime.today()
 output['provider'] = ''
 output['uid'] = ''
-output['tokens'] = ''
-output['allow_password_change'] = ''
+# output['tokens'] = ''
+# output['allow_password_change'] = ''
 
 # customersテーブル順に並べ替え
 # output.loc[:,['first_name',
@@ -363,10 +293,10 @@ output = output[[
               'city',
               'address',
               'comment',
-              'first_visit_store_id',
-              'last_visit_store_id',
+              # 'first_visit_store_id',
+              # 'last_visit_store_id',
               'first_visited_at',
-              'last_visited_at',
+              # 'last_visited_at',
               'card_number',
               'introducer',
               'searchd_by',
@@ -382,13 +312,13 @@ output = output[[
               'nearest_station_id',
               'email',
               'encrypted_password',
-              'reset_password_token',
-              'reset_password_sent_at',
-              'remember_created_at',
+              # 'reset_password_token',
+              # 'reset_password_sent_at',
+              # 'remember_created_at',
               'provider',
               'uid',
-              'tokens',
-              'allow_password_change',
+              # 'tokens',
+              # 'allow_password_change',
               'is_receive_thank_you_letter',
               'gender',
               'age',
@@ -414,12 +344,38 @@ for index, row in output.iterrows():
     # →ワードプレスのメールを優先する
     if name in dict_mail:
         uid = dict_mail[name]
+        # emailはワードプレスのメールをセットする
+        output.at[index, 'email'] = dict_mail[name]
 
-    # uidを上書きする
+    # uid,emailを上書きする
     output.at[index, 'uid'] = uid
+    # output.at[index, 'email'] = uid
+
+    # provider,uidでユニークにする必要があるためproviderに連番をセットする
+    output.at[index, 'provider'] = index
+
 
 # csvに出力
 output.to_csv('customers.csv')
 # print(output['children_count'])
 # print(output.iloc[1][2])
 
+# DBにインサート 今回はcsvファイルからインサートする
+# for index, row in output.iterrows():
+#     print(index)
+#     sql_insert = """
+#         insert into customers(
+#             id,
+#             first_name,
+#             birthday,
+#             created_at,
+#             updated_at,
+#             uid,
+#             email
+#         )
+#         values(%s, %s, %s, %s, %s, %s, %s)
+#                  """
+#     cur.execute(sql_insert, (index, row['first_name'], '1900-01-01', row['created_at'], row['updated_at'], row['uid'], row['email']))
+#     # 実行結果をすべて取得する
+#     result = cur.fetchall()
+#     print(result)
