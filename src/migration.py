@@ -51,9 +51,13 @@ def convert_baby_ages(age):
         # 歳が入ってない場合はそのまま使う
         key = str(age)
 
-    if key != '':
+    if key != '' and key in dict_baby_ages:
         return dict_baby_ages[key]
     else:
+        # keyがからじゃない場合は出力する
+        if key != '':
+            print(key)
+
         return ''
 
 # サイズ情報をDBから取得する
@@ -154,9 +158,12 @@ def convert_visit_reasons(visit_reasons):
 
 # csvに入っている日付からDBに入れる用の日付に変換する
 def convert_date(date, prefix):
-    if type(date) is str:
+    # print(type(date))
+    # 文字列かつ"/"が含まれる場合に分割処理をする
+    if type(date) is str and date.count('/') == 2:
         # "/"で分割する
         date_list = str(date).split('/')
+        # print(date_list)
         year = prefix + date_list[2]
         month = date_list[0]
         day = date_list[1]
@@ -166,7 +173,8 @@ def convert_date(date, prefix):
         return '9999-12-31'
 
 # DataFrame型で取得
-csvData = pd.read_csv('./src/file/fm_sample.csv')
+# csvData = pd.read_csv('./src/file/fm_sample.csv')
+csvData = pd.read_csv('./src/file/fm.csv')
 # 列でデータを扱う
 output = pd.DataFrame()
 # DataFrameのループ　全列データ取得
@@ -338,7 +346,7 @@ for index, row in output.iterrows():
     if type(row['phone_mail']) is str:
         uid = row['phone_mail']
 
-    name = row['first_name'] + row['last_name']
+    name = str(row['first_name']) + str(row['last_name'])
     # PCメール、携帯メールがなくてワードプレスのメールアドレスがある場合はそれを使う
     # if uid == '' and name in dict_mail:
     # →ワードプレスのメールを優先する
