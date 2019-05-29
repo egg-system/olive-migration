@@ -42,6 +42,7 @@ for id, name in result_baby_ages:
     dict_baby_ages[name] = id
 
 # 生後をidに変換
+error_baby_ages = []
 def convert_baby_ages(age):
     key = ''
     if str(age).find('歳') != -1:
@@ -56,7 +57,7 @@ def convert_baby_ages(age):
     else:
         # keyがからじゃない場合は出力する
         if key != '':
-            print(key)
+            error_baby_ages.append(key)
 
         return ''
 
@@ -91,13 +92,14 @@ for id, name in result_zoomancies:
     dict_zoomancies[re_name] = id
 
 # 動物占いをIDに変換
+error_zoomancies = []
 def convert_zoomancies(zoomancies):
     if zoomancies in dict_zoomancies:
         return dict_zoomancies[zoomancies]
     else:
         # DBに入ってないものを出力
         if type(zoomancies) is str:
-            print(zoomancies)
+            error_zoomancies.append(zoomancies)
 
 # 職業情報をDBから取得する
 sql_occupations = "select id, name from occupations"
@@ -110,13 +112,14 @@ for id, name in result_occupations:
     dict_occupations[name] = id
 
 # 職業情報をIDに変換
+error_occupations = []
 def convert_occupations(occupations):
     if occupations in dict_occupations:
         return dict_occupations[occupations]
     else:
         # DBに入ってないものを出力
         if type(occupations) is str:
-            print(occupations)
+            error_occupations.append(occupations)
 
 # 最寄駅をDBから取得する
 sql_nearest_stations = "select id, name from nearest_stations"
@@ -129,13 +132,14 @@ for id, name in result_nearest_stations:
     dict_nearest_stations[name] = id
 
 # 最寄駅をIDに変換
+error_nearest_stations = []
 def convert_nearest_stations(nearest_stations):
     if nearest_stations in dict_nearest_stations:
         return dict_nearest_stations[nearest_stations]
     else:
         # DBに入ってないものを出力
         if type(nearest_stations) is str:
-            print(nearest_stations)
+            error_nearest_stations.append(nearest_stations)
 
 # 来店経緯をDBから取得する
 sql_visit_reasons = "select id, name from visit_reasons"
@@ -148,17 +152,17 @@ for id, name in result_visit_reasons:
     dict_visit_reasons[name] = id
 
 # 来店経緯をIDに変換
+error_visit_reasons = []
 def convert_visit_reasons(visit_reasons):
     if visit_reasons in dict_visit_reasons:
         return dict_visit_reasons[visit_reasons]
     else:
         # DBに入ってないものを出力
         if type(visit_reasons) is str:
-            print(visit_reasons)
+            error_visit_reasons.append(visit_reasons)
 
 # csvに入っている日付からDBに入れる用の日付に変換する
 def convert_date(date, prefix):
-    # print(type(date))
     # 文字列かつ"/"が含まれる場合に分割処理をする
     if type(date) is str and date.count('/') == 2:
         # "/"で分割する
@@ -169,8 +173,8 @@ def convert_date(date, prefix):
         day = date_list[1]
         return datetime.date(int(year), int(month), int(day))
     else:
-        # 日付が入ってない場合はデフォルト値をセットする(後からDBをNULLに修正する)
-        return '9999-12-31'
+        # DBにcsvインポートするようにNULLにで返す
+        return 'NULL'
 
 # DataFrame型で取得
 # csvData = pd.read_csv('./src/file/fm_sample.csv')
@@ -282,7 +286,6 @@ output['uid'] = ''
 # output['allow_password_change'] = ''
 
 # customersテーブル順に並べ替え
-# output.loc[:,['first_name',
 output = output[[
               'id',
               'first_name',
@@ -387,3 +390,10 @@ output.to_csv('customers.csv')
 #     # 実行結果をすべて取得する
 #     result = cur.fetchall()
 #     print(result)
+
+# 重複削除
+# print(set(error_baby_ages))
+# print(set(error_zoomancies))
+# print(set(error_nearest_stations))
+# print(set(error_occupations))
+# print(set(error_visit_reasons))
