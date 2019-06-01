@@ -425,8 +425,10 @@ for index, row in output.iterrows():
 
 # ワードプレスのデータに合わせて最終的なファイルを出力する
 for index, row in customersData.iterrows():
-    # wordpressName = str(row['first_name']) + str(row['last_name'])
-    # wordpressNameReverse = str(row['last_name']) + str(row['first_name'])
+    # date型はデフォルトでNULLを入れる
+    customersData.at[index, 'birthday'] = 'NULL'
+    customersData.at[index, 'first_visited_at'] = 'NULL'
+
     wordpressName = str(row['first_name']).strip() + str(row['last_name']).strip()
     wordpressNameReverse = str(row['last_name']).strip() + str(row['first_name']).strip()
     keyname = ''
